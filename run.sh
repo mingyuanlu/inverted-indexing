@@ -8,6 +8,5 @@ spark-submit \
    --conf spark.executor.memoryOverhead=1024 \
    --conf "spark.executor.extraJavaOptions=-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps" \
    --conf "spark.driver.extraJavaOptions=-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps" \
-   --py-files functions.py \
    --total-executor-cores 4 \
    "$@"
