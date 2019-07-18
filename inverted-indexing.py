@@ -51,7 +51,7 @@ def hist_data(data):
     return bins
 
 def cleanText(word):
-    return word.encode('utc-8').translate(str.maketrans('', '', string.punctuation))
+    return word.encode('utc-8', 'ignore').translate(str.maketrans('', '', string.punctuation))
 
 
 def main(sc, filenames):
