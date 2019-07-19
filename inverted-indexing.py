@@ -49,10 +49,28 @@ def hist_data(data):
                     break
 
     return bins
+'''
+def cleanWords(word):
+    return word.encode('utf','ignore').lower().translate(str.maketrans('', '', string.punctuation))
+'''
+def cleanWords(words):
+    #print(words)
+    words = words.encode('utf-8','ignore')
+    words = words.decode('utf-8','ignore')
+    words = words.lower()
+    #print('64 %s')%(words)
+    cleaned_words = words.translate(str.maketrans('', '', string.punctuation))
+    #print('66 %s') % (cleaned_words)
+    return cleaned_words
 
-def cleanText(word):
-    return word.encode('utc-8', 'ignore').translate(str.maketrans('', '', string.punctuation))
+def processFile(filename, sc, rddList):
+    text_file = sc.textFile(filename)
+    words_rdd = text_file.flatMap(lambda line: cleanWords(line).split())\
+                    .filter(lambda x: len(x) > 0)
+    words_rdd = words_rdd.map(lambda x: (x, os.path.basename(filename))).distinct()
+    #words_rdd = words_rdd.map(lambda x: (x[0], [x[1]]))
 
+    rddList.append(words_rdd)
 
 def main(sc, filenames):
 
@@ -64,21 +82,53 @@ def main(sc, filenames):
     #totalTermDoc = []
     #with open(outFileName, 'w') as outfile:
     listOfRDD = []
+
     for fname in filenames:
-        with open(fname) as infile:
-            infileRDD = sc.textFile(infile)
-            infileRDD.flatMap(lambda x: cleanWord(x)).split().filter(lambda x: len(x)>0) \
-                     .map(lambda x: (x, fname))
-            listOfRDD.append(infileRDD)
-            #totalTermDoc.append( getTermDoc(infile)
+        print(fname)
+        fname = '/user/'+os.path.basename(fname)
+        #with open(fname) as infile:
+        #infileRDD = sc.textFile('hdfs://ec2-18-204-83-229.compute-1.amazonaws.com:9000/user/0')
+        #infileRDD = sc.textFile('hdfs://ec2-18-204-83-229.compute-1.amazonaws.com:9000'+fname)
+      
+        #infileRDD.map(lambda x: cleanWord(x).split(' ')) \
+        #processFile('hdfs://ec2-18-204-83-229.compute-1.amazonaws.com:9000/user/0', sc, listOfRDD)
+        processFile('hdfs://ec2-18-204-83-229.compute-1.amazonaws.com:9000'+fname, sc, listOfRDD)
+ 
+        '''
+        infileRDD.map(lambda x: x.lower()) \
+        .map(lambda x: x.encode('utf','ignore')) \
+        .map(lambda x: x.split(' ')) \
+        .filter(lambda x: len(x)>0) \
+        .map(lambda x: (x, fname))
+        print(infileRDD.collect())
+        listOfRDD.append(infileRDD)
+        '''
+        #totalTermDoc.append( getTermDoc(infile)
             #outfile.write(infile.read())
     #concatText = f.read_file(outFileName)
 
     #concatTextRDD = sc.broadcast(concatText)
-
-    concatRDD = sc.union(listOfRDD)
+    print(listOfRDD)
+    concatRDD = sc.union(listOfRDD) \
+    .map(lambda x: (x[0], [x[1]])) \
+    .reduceByKey(lambda x, y: x+y)
+    #concatRDD = concatRDD.map(lambda x: 
     #concatRDD.collect()
-    concatRDD.take(10)
+    #print(concatRDD.take(10))
+
+    word_id = concatRDD.map(lambda x: x[0]).zipWithIndex()
+    word_map  = word_id.collectAsMap()
+
+    wordIdConcatRDD = concatRDD.map(lambda x: (word_map[x[0]], [x[1]]))
+    
+    #print(wordIdConcatRDD.take(100))
+
+    #reducedRDD = wordIdConcatRDD.reduceByKey(lambda x, y: x+y)
+    
+    print(wordIdConcatRDD.take(100))
+    # print(reducedRDD.take(100))
+
+
     '''
     concatTextRDD.map(lambda x: x.encode("utf", "ignore")) \
                  .map(lambda x: x.split(' ')) \
